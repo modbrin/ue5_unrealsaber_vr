@@ -3,6 +3,8 @@
 
 #include "Cube.h"
 
+#include "SaberUtils.h"
+
 // Sets default values
 ACube::ACube(const FObjectInitializer& OI) : Super(OI)
 {
@@ -10,11 +12,11 @@ ACube::ACube(const FObjectInitializer& OI) : Super(OI)
 	PrimaryActorTick.bCanEverTick = true;
 	SceneRoot = OI.CreateDefaultSubobject<USceneComponent>(this, TEXT("SceneRoot"));
 	CubeMesh = OI.CreateDefaultSubobject<UStaticMeshComponent>(this, TEXT("CubeMesh"));
-	CubeMeshCounterpart = OI.CreateDefaultSubobject<UStaticMeshComponent>(this, TEXT("CubeMeshCounterPart"));
+	CubeCounterpartMesh = OI.CreateDefaultSubobject<UStaticMeshComponent>(this, TEXT("CubeMeshCounterPart"));
 
 	CubeMesh->AttachToComponent(SceneRoot, FAttachmentTransformRules::KeepRelativeTransform);
-	CubeMeshCounterpart->AttachToComponent(SceneRoot, FAttachmentTransformRules::KeepRelativeTransform);
-	CubeMeshCounterpart->SetVisibility(false);
+	CubeCounterpartMesh->AttachToComponent(SceneRoot, FAttachmentTransformRules::KeepRelativeTransform);
+	CubeCounterpartMesh->SetVisibility(false);
 	SetRootComponent(SceneRoot);
 }
 
@@ -23,6 +25,12 @@ void ACube::BeginPlay()
 {
 	Super::BeginPlay();
 	CubeMesh->SetSimulatePhysics(false);
+
+	if (CubeDynamicMaterial != nullptr)
+	{
+		CubeDynamicMaterial->SetScalarParameterValue(TEXT("IsCutEnabled"), 0.f);
+		CubeCounterpartDynamicMaterial->SetScalarParameterValue(TEXT("IsCutEnabled"), 0.f);
+	}
 }
 
 // Called every frame
@@ -44,5 +52,38 @@ void ACube::PerformMovement(float DeltaTime)
 void ACube::Hit(FVector HitLocation, FVector HitNormal, FVector SaberDirection)
 {
 	bIsFlying = false;
+}
+
+void ACube::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	if (CubeDynamicMaterial == nullptr && CubeMesh != nullptr)
+	{
+		CubeDynamicMaterial = UMaterialInstanceDynamic::Create(CubeMesh->GetMaterial(0), nullptr);
+		CubeMesh->SetMaterial(0, CubeDynamicMaterial);
+	}
+	if (CubeCounterpartDynamicMaterial == nullptr && CubeCounterpartMesh != nullptr)
+	{
+		CubeCounterpartDynamicMaterial = UMaterialInstanceDynamic::Create(CubeCounterpartMesh->GetMaterial(0), nullptr);
+		CubeCounterpartMesh->SetMaterial(0, CubeCounterpartDynamicMaterial);
+	}
+}
+
+void ACube::CutOccured(FVector CutterPlanePoint, FVector CutterPlaneNormal)
+{
+	FVector BoxCenter = GetActorLocation();
+	FVector CutterOffsetVector = SaberUtils::GetOrthogonalVectorPointToPlane(BoxCenter, CutterPlanePoint, CutterPlaneNormal);
+	CutterOffsetVector = GetActorRotation().UnrotateVector(CutterOffsetVector);
+	CubeDynamicMaterial->SetScalarParameterValue(TEXT("CutNormalX"), CutterOffsetVector.X);
+	CubeDynamicMaterial->SetScalarParameterValue(TEXT("CutNormalY"), CutterOffsetVector.Y);
+	CubeDynamicMaterial->SetScalarParameterValue(TEXT("CutNormalZ"), CutterOffsetVector.Z);
+	CubeDynamicMaterial->SetScalarParameterValue(TEXT("CutOffset"), CutterOffsetVector.Size());
+	CubeDynamicMaterial->SetScalarParameterValue(TEXT("IsCutEnabled"), 1.f);
+}
+
+FVector ACube::GetMovementDirection()
+{
+	return WorldMovementDirection;
 }
 

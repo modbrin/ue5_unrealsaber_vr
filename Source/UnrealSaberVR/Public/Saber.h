@@ -31,6 +31,10 @@ public:
 	void SetSaberRetracted(bool IsRetracted);
 	virtual void OnConstruction(const FTransform& Transform) override;
 
+	UFUNCTION()
+	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+	                    int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
 public: // properties
 	UPROPERTY()
 	USceneComponent* SceneRoot;
@@ -41,6 +45,9 @@ public: // properties
 	UPROPERTY(EditDefaultsOnly)
 	UStaticMeshComponent* HandleMesh;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	class UCapsuleComponent* SaberCollision;
+	
 	UPROPERTY(EditDefaultsOnly)
 	class UNiagaraComponent* SaberFX;
 
@@ -69,4 +76,7 @@ private: // properties
 	UMaterialInstanceDynamic* SaberDynamicMaterial;
 
 	FTimerHandle DemoSaberActivation;
+
+	FVector SaberTipLastFrame = FVector(0.f, 0.f, 1.f);
+	FVector SaberTipCurrentFrame = FVector(0.f, 0.f, 1.f);
 };

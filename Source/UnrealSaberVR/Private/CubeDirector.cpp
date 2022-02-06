@@ -34,7 +34,8 @@ void ACubeDirector::TimerTick()
 	if (World != nullptr)
 	{
 		FVector Location = GetActorLocation();
-		World->SpawnActor(CubeClass, &Location);
+		AActor* SpawnedActor = World->SpawnActor(CubeClass, &Location);
+		SpawnedActor->SetActorRotation(FRotator(30.f, 30.f, 30.f));
 	}
 }
 

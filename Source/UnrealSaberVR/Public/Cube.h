@@ -3,11 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Cuttable.h"
 #include "GameFramework/Actor.h"
 #include "Cube.generated.h"
 
 UCLASS()
-class UNREALSABERVR_API ACube : public AActor
+class UNREALSABERVR_API ACube : public AActor, public ICuttable
 {
 	GENERATED_BODY()
 	
@@ -19,9 +20,14 @@ protected:
 
 public:
 	virtual void Tick(float DeltaTime) override;
-
 	void PerformMovement(float DeltaTime);
 	void Hit(FVector HitLocation, FVector HitNormal, FVector SaberDirection);
+	virtual void OnConstruction(const FTransform& Transform) override;
+
+	// ICuttable Implementation
+	virtual void CutOccured(FVector CutterPlanePoint, FVector CutterPlaneNormal) override;
+	virtual FVector GetMovementDirection() override;
+	// ICuttable Implementation
 
 public: // properties
 	UPROPERTY()
@@ -31,7 +37,7 @@ public: // properties
 	UStaticMeshComponent* CubeMesh;
 
 	UPROPERTY(EditDefaultsOnly, Category=Mesh)
-	UStaticMeshComponent* CubeMeshCounterpart;
+	UStaticMeshComponent* CubeCounterpartMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Movement)
 	FVector WorldMovementDirection = FVector::ZeroVector;
@@ -41,4 +47,10 @@ public: // properties
 
 private: // properties
 	bool bIsFlying = true;
+
+	UPROPERTY()
+	UMaterialInstanceDynamic* CubeDynamicMaterial;
+
+	UPROPERTY()
+	UMaterialInstanceDynamic* CubeCounterpartDynamicMaterial;
 };
