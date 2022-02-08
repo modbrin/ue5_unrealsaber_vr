@@ -70,16 +70,40 @@ void ACube::OnConstruction(const FTransform& Transform)
 	}
 }
 
+void ACube::OnDestructionTimerEnd()
+{
+	GetWorldTimerManager().ClearTimer(DestroyCountdownTimer);
+	Destroy();
+}
+
 void ACube::CutOccured(FVector CutterPlanePoint, FVector CutterPlaneNormal)
 {
+	// Calculate material cut params from cutter plane
 	FVector BoxCenter = GetActorLocation();
 	FVector CutterOffsetVector = SaberUtils::GetOrthogonalVectorPointToPlane(BoxCenter, CutterPlanePoint, CutterPlaneNormal);
-	CutterOffsetVector = GetActorRotation().UnrotateVector(CutterOffsetVector);
-	CubeDynamicMaterial->SetScalarParameterValue(TEXT("CutNormalX"), CutterOffsetVector.X);
-	CubeDynamicMaterial->SetScalarParameterValue(TEXT("CutNormalY"), CutterOffsetVector.Y);
-	CubeDynamicMaterial->SetScalarParameterValue(TEXT("CutNormalZ"), CutterOffsetVector.Z);
-	CubeDynamicMaterial->SetScalarParameterValue(TEXT("CutOffset"), CutterOffsetVector.Size());
+	FVector AdjustedCutterOffsetVector = GetActorRotation().UnrotateVector(CutterOffsetVector);
+
+	// Apply material to main fragment
+	CubeDynamicMaterial->SetScalarParameterValue(TEXT("CutNormalX"), AdjustedCutterOffsetVector.X);
+	CubeDynamicMaterial->SetScalarParameterValue(TEXT("CutNormalY"), AdjustedCutterOffsetVector.Y);
+	CubeDynamicMaterial->SetScalarParameterValue(TEXT("CutNormalZ"), AdjustedCutterOffsetVector.Z);
+	CubeDynamicMaterial->SetScalarParameterValue(TEXT("CutOffset"), AdjustedCutterOffsetVector.Size());
 	CubeDynamicMaterial->SetScalarParameterValue(TEXT("IsCutEnabled"), 1.f);
+	CubeMesh->SetSimulatePhysics(true);
+	CubeMesh->AddImpulse(CutterOffsetVector.GetSafeNormal() * SideImpulseOnCut);
+
+	// Apply material to counterpart fragment
+	CubeCounterpartDynamicMaterial->SetScalarParameterValue(TEXT("CutNormalX"), -AdjustedCutterOffsetVector.X);
+	CubeCounterpartDynamicMaterial->SetScalarParameterValue(TEXT("CutNormalY"), -AdjustedCutterOffsetVector.Y);
+	CubeCounterpartDynamicMaterial->SetScalarParameterValue(TEXT("CutNormalZ"), -AdjustedCutterOffsetVector.Z);
+	CubeCounterpartDynamicMaterial->SetScalarParameterValue(TEXT("CutOffset"), -AdjustedCutterOffsetVector.Size());
+	CubeCounterpartDynamicMaterial->SetScalarParameterValue(TEXT("IsCutEnabled"), 1.f);
+	CubeCounterpartMesh->SetVisibility(true);
+	CubeCounterpartMesh->SetSimulatePhysics(true);
+	CubeCounterpartMesh->AddImpulse(-CutterOffsetVector.GetSafeNormal() * SideImpulseOnCut);
+
+	// Start countdown until self-destruction
+	GetWorldTimerManager().SetTimer(DestroyCountdownTimer, this, &ACube::OnDestructionTimerEnd, LifespanSecondsAfterCut, false);
 }
 
 FVector ACube::GetMovementDirection()

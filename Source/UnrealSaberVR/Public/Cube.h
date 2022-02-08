@@ -24,6 +24,9 @@ public:
 	void Hit(FVector HitLocation, FVector HitNormal, FVector SaberDirection);
 	virtual void OnConstruction(const FTransform& Transform) override;
 
+	UFUNCTION()
+	void OnDestructionTimerEnd();
+
 	// ICuttable Implementation
 	virtual void CutOccured(FVector CutterPlanePoint, FVector CutterPlaneNormal) override;
 	virtual FVector GetMovementDirection() override;
@@ -45,6 +48,12 @@ public: // properties
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float MovementSpeed = 5.f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float SideImpulseOnCut = 10000.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	float LifespanSecondsAfterCut = 3.f;
+	
 private: // properties
 	bool bIsFlying = true;
 
@@ -53,4 +62,6 @@ private: // properties
 
 	UPROPERTY()
 	UMaterialInstanceDynamic* CubeCounterpartDynamicMaterial;
+
+	FTimerHandle DestroyCountdownTimer;
 };
